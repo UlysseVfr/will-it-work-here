@@ -26,6 +26,10 @@ PER_PAGE = 20_000  # large pages keep the number of requests small
 MAX_RETRIES = 4
 
 
+class ApiError(RuntimeError):
+    """The API answered, but rejected the request (e.g. unknown indicator code)."""
+
+
 def get_json(url: str, params: dict) -> list:
     """GET a World Bank API URL with retries. Returns the parsed JSON body."""
     params = {"format": "json", "per_page": PER_PAGE, **params}
@@ -36,7 +40,7 @@ def get_json(url: str, params: dict) -> list:
             body = resp.json()
             # The API returns errors as a 200 with a "message" object.
             if isinstance(body, list) and body and isinstance(body[0], dict) and "message" in body[0]:
-                raise RuntimeError(f"World Bank API error: {body[0]['message']}")
+                raise ApiError(f"World Bank API error: {body[0]['message']}")
             return body
         except (requests.RequestException, ValueError) as exc:
             if attempt == MAX_RETRIES:
@@ -98,6 +102,19 @@ def fetch_indicator(name: str, code: str, source: int) -> pd.DataFrame:
     return parse_indicator(records, name)
 
 
+def fetch_indicator_with_fallbacks(name: str, spec: dict) -> pd.DataFrame | None:
+    """Try the main code, then each fallback. Returns None if every code is rejected."""
+    for code in [spec["code"], *spec.get("fallback_codes", [])]:
+        try:
+            df = fetch_indicator(name, code, spec["source"])
+            if code != spec["code"]:
+                log.warning("%s: used fallback code %s", name, code)
+            return df
+        except ApiError as exc:
+            log.warning("%s: code %s rejected (%s)", name, code, exc)
+    return None
+
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     RAW_DIR.mkdir(parents=True, exist_ok=True)
@@ -106,9 +123,12 @@ def main() -> None:
     countries.to_csv(RAW_DIR / "countries.csv", index=False)
     log.info("Saved %d countries", len(countries))
 
-    frames = []
+    frames, failed = [], []
     for name, spec in INDICATORS.items():
-        df = fetch_indicator(name, spec["code"], spec["source"])
+        df = fetch_indicator_with_fallbacks(name, spec)
+        if df is None:
+            failed.append(name)
+            continue
         df = df[df["iso3"].isin(countries["iso3"])]  # drop regional aggregates
         log.info("%-24s %6d rows, %3d countries", name, len(df), df["iso3"].nunique())
         frames.append(df)
@@ -116,6 +136,9 @@ def main() -> None:
     indicators = pd.concat(frames, ignore_index=True)
     indicators.to_csv(RAW_DIR / "indicators.csv", index=False)
     log.info("Saved %d indicator rows to %s", len(indicators), RAW_DIR / "indicators.csv")
+    if failed:
+        log.error("Could not download: %s (check their codes in ingestion/config.py)", ", ".join(failed))
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
