@@ -1,122 +1,53 @@
-"""Download country metadata and indicators from the World Bank API.
+# Will It Work Here?
 
-Writes two raw CSV files that dbt will read later:
-  data/raw/countries.csv   one row per country (aggregates like "World" removed)
-  data/raw/indicators.csv  long format: one row per country, indicator and year
+An interactive tool to explore **where the results of cash transfer RCTs are likely to generalize**.
+Pick a study and see which countries have the most similar context, or pick a country and find
+the studies run in contexts most like it. Users choose which context factors matter, and the
+similarity scores update live.
 
-Run from the project root:
-    python -m ingestion.world_bank
-"""
+> Status: early development (milestone 1, country data pipeline).
 
-from __future__ import annotations
+## Project structure
 
-import logging
-import time
-from pathlib import Path
+```
+studies/     One YAML file per cash transfer study, reviewed by the research lead
+ingestion/   Python scripts that download raw data (World Bank, WGI, ...)
+dbt/         Data models that clean and combine the raw data (coming next)
+site/        The public website (coming later)
+tests/       Automated tests
+data/raw/    Downloaded data (not committed to git)
+```
 
-import pandas as pd
-import requests
+## Run it locally
 
-from ingestion.config import API_BASE, END_YEAR, INDICATORS, START_YEAR
+```bash
+python -m venv .venv
+# Windows:  .venv\Scripts\activate
+# Mac/Linux: source .venv/bin/activate
+pip install -r requirements.txt
 
-log = logging.getLogger(__name__)
+pytest                          # run the tests
+python -m ingestion.world_bank  # download country data into data/raw/
+```
 
-RAW_DIR = Path("data/raw")
-PER_PAGE = 20_000  # large pages keep the number of requests small
-MAX_RETRIES = 4
+## Contributing a study
 
+1. Copy `studies/_TEMPLATE.yaml` and name it like `author-2016-ken.yaml`.
+2. Fill in the fields (you can do this directly in the GitHub web editor).
+3. Open a pull request. Automatic checks tell you if a field is missing or invalid.
 
-def get_json(url: str, params: dict) -> list:
-    """GET a World Bank API URL with retries. Returns the parsed JSON body."""
-    params = {"format": "json", "per_page": PER_PAGE, **params}
-    for attempt in range(1, MAX_RETRIES + 1):
-        try:
-            resp = requests.get(url, params=params, timeout=60)
-            resp.raise_for_status()
-            body = resp.json()
-            # The API returns errors as a 200 with a "message" object.
-            if isinstance(body, list) and body and isinstance(body[0], dict) and "message" in body[0]:
-                raise RuntimeError(f"World Bank API error: {body[0]['message']}")
-            return body
-        except (requests.RequestException, ValueError) as exc:
-            if attempt == MAX_RETRIES:
-                raise
-            wait = 2**attempt
-            log.warning("Attempt %d failed (%s), retrying in %ds", attempt, exc, wait)
-            time.sleep(wait)
-    raise AssertionError("unreachable")
+Questions, ideas and error reports go in [Issues](../../issues).
 
+## Data sources
 
-def fetch_all_pages(url: str, params: dict) -> list[dict]:
-    """Follow the API's pagination and return every record."""
-    meta, records = get_json(url, {**params, "page": 1})
-    records = records or []
-    for page in range(2, int(meta.get("pages", 1)) + 1):
-        _, more = get_json(url, {**params, "page": page})
-        records.extend(more or [])
-    return records
+- World Bank, World Development Indicators (WDI)
+- World Bank, Worldwide Governance Indicators (WGI)
+- Global Findex (via WDI)
 
+## Roadmap
 
-def parse_countries(records: list[dict]) -> pd.DataFrame:
-    """Keep real countries only (aggregates have region id 'NA')."""
-    rows = [
-        {
-            "iso3": r["id"],
-            "iso2": r["iso2Code"],
-            "name": r["name"],
-            "region": r["region"]["value"].strip(),
-            "income_level": r["incomeLevel"]["value"].strip(),
-        }
-        for r in records
-        if r["region"]["id"] != "NA"
-    ]
-    return pd.DataFrame(rows).sort_values("iso3").reset_index(drop=True)
-
-
-def parse_indicator(records: list[dict], name: str) -> pd.DataFrame:
-    """Turn raw indicator records into tidy rows, dropping empty values."""
-    rows = [
-        {
-            "iso3": r["countryiso3code"],
-            "indicator": name,
-            "year": int(r["date"]),
-            "value": float(r["value"]),
-        }
-        for r in records
-        if r.get("value") is not None and r.get("countryiso3code")
-    ]
-    return pd.DataFrame(rows, columns=["iso3", "indicator", "year", "value"])
-
-
-def fetch_countries() -> pd.DataFrame:
-    return parse_countries(fetch_all_pages(f"{API_BASE}/country", {}))
-
-
-def fetch_indicator(name: str, code: str, source: int) -> pd.DataFrame:
-    url = f"{API_BASE}/country/all/indicator/{code}"
-    records = fetch_all_pages(url, {"source": source, "date": f"{START_YEAR}:{END_YEAR}"})
-    return parse_indicator(records, name)
-
-
-def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    RAW_DIR.mkdir(parents=True, exist_ok=True)
-
-    countries = fetch_countries()
-    countries.to_csv(RAW_DIR / "countries.csv", index=False)
-    log.info("Saved %d countries", len(countries))
-
-    frames = []
-    for name, spec in INDICATORS.items():
-        df = fetch_indicator(name, spec["code"], spec["source"])
-        df = df[df["iso3"].isin(countries["iso3"])]  # drop regional aggregates
-        log.info("%-24s %6d rows, %3d countries", name, len(df), df["iso3"].nunique())
-        frames.append(df)
-
-    indicators = pd.concat(frames, ignore_index=True)
-    indicators.to_csv(RAW_DIR / "indicators.csv", index=False)
-    log.info("Saved %d indicator rows to %s", len(indicators), RAW_DIR / "indicators.csv")
-
-
-if __name__ == "__main__":
-    main()
+1. Country data pipeline (ingestion + dbt models + tests)
+2. Study catalogue of cash transfer RCTs
+3. Similarity engine with adjustable weights
+4. Website v1
+5. "How it's built" page and launch

@@ -1,0 +1,18 @@
+# Copy this file to create a new study: studies/<firstauthor>-<year>-<country>.yaml
+# Lines starting with # are comments and are ignored.
+
+title: ""                      # full paper title
+authors: []                    # last names, e.g. [Haushofer, Shapiro]
+year_published: 2020           # year of the version we use
+country: ""                    # ISO 3-letter code, e.g. KEN, MEX, BGD
+study_start_year: 2015         # year the program / baseline started (used to match context)
+program: ""                    # program name, e.g. "GiveDirectly", "PROGRESA"
+transfer_type: unconditional   # unconditional | conditional | labelled
+recipient: household           # household | women | men | individual
+design: rct                    # rct | quasi_experimental
+url: ""                        # DOI link or paper URL
+
+# Research review
+status: draft                  # draft | validated | excluded
+validated_by: ""               # GitHub username of the reviewer
+notes: ""                      # anything worth knowing (caveats, why excluded, ...)

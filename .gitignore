@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Data (downloaded, never committed)
+data/raw/*
+!data/raw/.gitkeep
+
+# Secrets
+.env
+*.pem
+
+# Editors / OS
+.vscode/
+.DS_Store
+Thumbs.db
