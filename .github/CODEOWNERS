@@ -1,6 +1,5 @@
-# Who must approve changes to which files.
-# Replace RESEARCH_LEAD_USERNAME with the research lead's GitHub username, then
-# enable "Require review from Code Owners" in Settings > Branches.
+# Who is asked to review changes to which files.
+# The last matching line wins, so specific folders go after the catch-all.
 
-# studies/          @RESEARCH_LEAD_USERNAME
 *                   @UlysseVfr
+studies/            @sara-santander

@@ -18,6 +18,11 @@ tests/       Automated tests
 data/raw/    Downloaded data (not committed to git)
 ```
 
+## Team
+
+- **Ulysse Vaufrey** ([@UlysseVfr](https://github.com/UlysseVfr)): data engineering and development
+- [@sara-santander](https://github.com/sara-santander): research lead, study review and methodology
+
 ## Run it locally
 
 ```bash
