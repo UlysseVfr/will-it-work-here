@@ -51,5 +51,28 @@ def test_get_json_raises_on_api_error_message(monkeypatch):
         def json(self): return [{"message": [{"id": "120", "value": "Invalid value"}]}]
 
     monkeypatch.setattr(wb.requests, "get", lambda *a, **k: FakeResp())
-    with pytest.raises(RuntimeError, match="World Bank API error"):
+    with pytest.raises(wb.ApiError, match="World Bank API error"):
         wb.get_json("url", {})
+
+
+def test_fallback_code_used_when_main_code_rejected(monkeypatch):
+    calls = []
+
+    def fake_fetch(name, code, source):
+        calls.append(code)
+        if code == "NEW.CODE":
+            raise wb.ApiError("Invalid value")
+        return wb.parse_indicator(INDICATOR_RECORDS, name)
+
+    monkeypatch.setattr(wb, "fetch_indicator", fake_fetch)
+    df = wb.fetch_indicator_with_fallbacks("x", {"code": "NEW.CODE", "source": 3, "fallback_codes": ["OLD.CODE"]})
+    assert calls == ["NEW.CODE", "OLD.CODE"]
+    assert len(df) == 1
+
+
+def test_all_codes_rejected_returns_none(monkeypatch):
+    def always_fail(*a):
+        raise wb.ApiError("Invalid value")
+
+    monkeypatch.setattr(wb, "fetch_indicator", always_fail)
+    assert wb.fetch_indicator_with_fallbacks("x", {"code": "A", "source": 3}) is None

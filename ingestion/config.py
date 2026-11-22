@@ -18,8 +18,10 @@ INDICATORS = {
     # --- Finance ---
     "account_ownership": {"code": "FX.OWN.TOTL.ZS", "source": 2},  # % of people 15+ (Findex)
     # --- Governance ---
-    "gov_effectiveness": {"code": "GE.EST", "source": 3},  # WGI estimate, about -2.5 to 2.5
-    "control_of_corruption": {"code": "CC.EST", "source": 3},  # WGI estimate
+    # WGI codes were renamed with the 2025 methodology revision (GE.EST -> GOV_WGI_GE.EST).
+    # "fallback_codes" are tried in order if the main code is rejected by the API.
+    "gov_effectiveness": {"code": "GOV_WGI_GE.EST", "source": 3, "fallback_codes": ["GE.EST"]},
+    "control_of_corruption": {"code": "GOV_WGI_CC.EST", "source": 3, "fallback_codes": ["CC.EST"]},
 }
 
 # Cash transfer RCTs start in the late 1990s; keep some margin before that.
