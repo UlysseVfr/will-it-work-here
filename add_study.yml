@@ -1,0 +1,18 @@
+name: Report a data error
+description: Something in a study or country figure looks wrong
+labels: [data-error]
+body:
+  - type: input
+    id: where
+    attributes:
+      label: Where is the error?
+      description: Study file name, country, or page of the site
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What is wrong, and what should it be?
+      description: Include a source if you have one
+    validations:
+      required: true

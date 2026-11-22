@@ -1,0 +1,6 @@
+# Who must approve changes to which files.
+# Replace RESEARCH_LEAD_USERNAME with the research lead's GitHub username, then
+# enable "Require review from Code Owners" in Settings > Branches.
+
+# studies/          @RESEARCH_LEAD_USERNAME
+*                   @UlysseVfr

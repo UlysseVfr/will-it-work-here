@@ -1,0 +1,25 @@
+name: Add a study
+description: Suggest a cash transfer study to include
+labels: [study]
+body:
+  - type: input
+    id: reference
+    attributes:
+      label: Paper
+      description: Authors, year and title, or a DOI / link
+    validations:
+      required: true
+  - type: input
+    id: country
+    attributes:
+      label: Country
+  - type: dropdown
+    id: transfer_type
+    attributes:
+      label: Transfer type
+      options: [unconditional, conditional, labelled, not sure]
+  - type: textarea
+    id: why
+    attributes:
+      label: Why include it?
+      description: Design quality, relevance, anything worth knowing

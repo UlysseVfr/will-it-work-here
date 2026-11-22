@@ -1,0 +1,14 @@
+name: Methodology question or idea
+description: How similarity is computed, which outcomes to compare, default weights...
+labels: [methodology]
+body:
+  - type: textarea
+    id: topic
+    attributes:
+      label: Question or proposal
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: References (optional)
